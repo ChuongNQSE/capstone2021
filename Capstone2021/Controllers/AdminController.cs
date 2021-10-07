@@ -5,6 +5,7 @@ using ClosedXML.Excel;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -442,6 +443,21 @@ namespace Capstone2021.Controllers
         }
 
         [HttpGet]
+        [Route("report/category-by-month")]
+        public IHttpActionResult reportCategoryByMonth([FromUri] int month)
+        {
+            if (month < 1 || month > 12)
+            {
+                return BadRequest("Tháng từ 1 đến 12");
+            }
+            ResponseDTO response = new ResponseDTO();
+            IList<ReportCategoryByMonthDTO> report = managerService.reportCategoryByMonth(month);
+            response.message = "OK";
+            response.data = report;
+            return Ok(response);
+        }
+
+        [HttpGet]
         [Route("dashboard-data")]
         public IHttpActionResult getDashboardData()
         {
@@ -458,6 +474,21 @@ namespace Capstone2021.Controllers
         {
             ResponseDTO response = new ResponseDTO();
             ReportByYearDTO report = managerService.reportByYear();
+            response.message = "OK";
+            response.data = report;
+            return Ok(response);
+        }
+
+        [HttpGet]
+        [Route("report/by-detail-month")]
+        public IHttpActionResult reportByDetailMonth([FromUri] int month)
+        {
+            if (month < 1 || month > 12)
+            {
+                return BadRequest("Tháng từ 1 đến 12");
+            }
+            ResponseDTO response = new ResponseDTO();
+            IList<ReportDetailByMonthDTO> report = managerService.reportDetailByMonth(month);
             response.message = "OK";
             response.data = report;
             return Ok(response);
@@ -566,7 +597,164 @@ namespace Capstone2021.Controllers
                     worksheet.Cell(11, 8).Style.Font.Bold = true;
                     worksheet.Cell(11, 9).Style.Font.Bold = true;
                     //hết tháng
+                    worksheet = workbook.Worksheets.Add("Report chi tiết tháng");
+                    worksheet.Range(worksheet.Cell(1, 1), worksheet.Cell(5, 14)).Merge();
+                    int CountRow = report.listreportdetailByMonth.Count();
+                    var rangedetail = worksheet.Range(worksheet.Cell(11, 1), worksheet.Cell(CountRow + 11, 9));
+                    range.Style.Font.FontSize = 16;
+                    table = rangedetail.CreateTable();
+                    table.ShowAutoFilter = false;
+                    table.ShowHeaderRow = false;
+                    worksheet.Column(1).Width = 50;
+                    worksheet.Column(2).Width = 30;
+                    worksheet.Column(3).Width = 30;
+                    worksheet.Column(4).Width = 30;
+                    worksheet.Column(5).Width = 30;
+                    worksheet.Column(6).Width = 30;
+                    worksheet.Column(7).Width = 30;
+                    imagePath = AppDomain.CurrentDomain.BaseDirectory + "Controllers\\sac.png";
+                    worksheet.AddPicture(imagePath).MoveTo(worksheet.Cell(1, 1)).Scale(0.4);
+                    worksheet.Cell(1, 1).Style.Font.SetFontSize(28);
+                    worksheet.Cell(1, 1).Style.Font.SetBold(true);
+                    worksheet.Cell(1, 1).Value = "                    Trung tâm Hỗ trợ học sinh, sinh viên Tp. Hồ Chí Minh";
+                    worksheet.Cell(1, 1).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(1, 1).Style.Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+                    worksheet.Cell(6, 4).Style.Font.SetItalic(true);
+                    worksheet.Cell(6, 4).Style.Font.SetFontColor(XLColor.Red);
+                    worksheet.Cell(6, 4).Value = "*Chú ý:tháng và quý có thể không đồng nhất(report được tạo ra dựa trên lựa chọn tháng và quý của người dùng)";
+                    worksheet.Cell(7, 4).Value = "Ngày " + DateTime.Now.ToString("dd/MM/yyyy");
 
+                    ReportDetailByMonthDTO reportdetailByThisMonth = report.listreportdetailByMonth.ToArray()[0];
+                    worksheet.Cell(9, 2).Style.Font.SetFontSize(26);
+                    worksheet.Cell(9, 2).Style.Font.SetBold(true);
+                    worksheet.Cell(9, 2).Value = "Báo cáo của tháng " + dto.month + "/" + DateTime.Now.Year;
+                    
+                    worksheet.Range(worksheet.Cell("G12"), worksheet.Cell("H15")).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(11, 1).Style.Font.FontSize = 16;
+                    worksheet.Cell(11, 2).Style.Font.FontSize = 16;
+                    worksheet.Cell(11, 3).Style.Font.FontSize = 16;
+                    worksheet.Cell(11, 4).Style.Font.FontSize = 16;
+                    worksheet.Cell(11, 5).Style.Font.FontSize = 16;
+                    worksheet.Cell(11, 6).Style.Font.FontSize = 16;
+                    worksheet.Cell(11, 1).Value = "Tên công việc";
+                    worksheet.Cell(11, 2).Value = "Tên nhà tuyển dụng";
+                    worksheet.Cell(11, 3).Value = "Số người cần tuyển";
+                    worksheet.Cell(11, 4).Value = "Số người đã ứng tuyển";
+                    worksheet.Cell(11, 5).Value = "Mức lương tối thiểu";
+                    worksheet.Cell(11, 6).Value = "Số ngày hiện";
+                    worksheet.Range(worksheet.Cell(11, 1), worksheet.Cell(11, 9)).Style.Fill.BackgroundColor = XLColor.LightBlue;
+                    List<ReportDetailByMonthDTO> reportList = new List<ReportDetailByMonthDTO>();
+                    reportList = report.listreportdetailByMonth;
+                    
+                    rangedetail.Style.Border.TopBorder = XLBorderStyleValues.Thin;
+                    rangedetail.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rangedetail.Style.Border.LeftBorder = XLBorderStyleValues.Thin;
+                    rangedetail.Style.Border.RightBorder = XLBorderStyleValues.Thin;
+                    rangedetail.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+                    rangedetail.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    worksheet.Column(9).Width = 15;
+                    for (int i = 0; i < CountRow; i++)
+                    {
+                        worksheet.Cell(12 + i, 1).Value = reportList[i].nameOfJobs;
+                        worksheet.Cell(12 + i, 2).Value = reportList[i].nameOfRecruiters;
+                        worksheet.Cell(12 + i, 3).Value = reportList[i].numberOfDesiredStudents;
+                        worksheet.Cell(12 + i, 4).Value = reportList[i].numberOfStudents;
+                        worksheet.Cell(12 + i, 5).Value = reportList[i].salaryMin;
+                        worksheet.Cell(12 + i, 6).Value = reportList[i].activeDays;
+
+                        worksheet.Cell(12 + i, 1).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                        worksheet.Cell(12 + i, 2).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                        worksheet.Cell(12 + i, 3).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                        worksheet.Cell(12 + i, 4).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                        worksheet.Cell(12 + i, 5).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                        worksheet.Cell(12 + i, 6).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                    }
+                    worksheet.Cell(11, 1).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(11, 2).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(11, 3).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(11, 4).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(11, 5).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(11, 6).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+                    worksheet.Cell(11, 1).Style.Font.Bold = true;
+                    worksheet.Cell(11, 2).Style.Font.Bold = true;
+                    worksheet.Cell(11, 3).Style.Font.Bold = true;
+                    worksheet.Cell(11, 4).Style.Font.Bold = true;
+                    worksheet.Cell(11, 5).Style.Font.Bold = true;
+                    worksheet.Cell(11, 6).Style.Font.Bold = true;
+                    //hết chi tiết tháng
+                    worksheet = workbook.Worksheets.Add("Report ngành nghề tháng");
+                    worksheet.Range(worksheet.Cell(1, 1), worksheet.Cell(5, 14)).Merge();
+                    int CountRow3 = report.listreportcategoryByMonth.Count();
+                    var rangedetail3 = worksheet.Range(worksheet.Cell(11, 1), worksheet.Cell(CountRow + 11, 4));
+                    range.Style.Font.FontSize = 16;
+                    table = rangedetail3.CreateTable();
+                    table.ShowAutoFilter = false;
+                    table.ShowHeaderRow = false;
+                    worksheet.Column(1).Width = 50;
+                    worksheet.Column(2).Width = 30;
+                    worksheet.Column(3).Width = 30;
+                    worksheet.Column(4).Width = 30;
+                    worksheet.Column(5).Width = 30;
+                    imagePath = AppDomain.CurrentDomain.BaseDirectory + "Controllers\\sac.png";
+                    worksheet.AddPicture(imagePath).MoveTo(worksheet.Cell(1, 1)).Scale(0.4);
+                    worksheet.Cell(1, 1).Style.Font.SetFontSize(28);
+                    worksheet.Cell(1, 1).Style.Font.SetBold(true);
+                    worksheet.Cell(1, 1).Value = "                    Trung tâm Hỗ trợ học sinh, sinh viên Tp. Hồ Chí Minh";
+                    worksheet.Cell(1, 1).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(1, 1).Style.Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+                    worksheet.Cell(6, 4).Style.Font.SetItalic(true);
+                    worksheet.Cell(6, 4).Style.Font.SetFontColor(XLColor.Red);
+                    worksheet.Cell(6, 4).Value = "*Chú ý:tháng và quý có thể không đồng nhất(report được tạo ra dựa trên lựa chọn tháng và quý của người dùng)";
+                    worksheet.Cell(7, 4).Value = "Ngày " + DateTime.Now.ToString("dd/MM/yyyy");
+
+                    ReportCategoryByMonthDTO reportcategoryByThisMonth = report.listreportcategoryByMonth.ToArray()[0];
+                    worksheet.Cell(9, 2).Style.Font.SetFontSize(26);
+                    worksheet.Cell(9, 2).Style.Font.SetBold(true);
+                    worksheet.Cell(9, 2).Value = "Báo cáo của tháng " + dto.month + "/" + DateTime.Now.Year;
+
+                    worksheet.Range(worksheet.Cell("G12"), worksheet.Cell("H15")).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(11, 1).Style.Font.FontSize = 16;
+                    worksheet.Cell(11, 2).Style.Font.FontSize = 16;
+                    worksheet.Cell(11, 3).Style.Font.FontSize = 16;
+                    worksheet.Cell(11, 4).Style.Font.FontSize = 16;
+                    worksheet.Cell(11, 1).Value = "Tên ngành nghề";
+                    worksheet.Cell(11, 2).Value = "Số người cần tuyển";
+                    worksheet.Cell(11, 3).Value = "Số công việc đã đăng";
+                    worksheet.Cell(11, 4).Value = "Số người đã ứng tuyển";
+                    worksheet.Range(worksheet.Cell(11, 1), worksheet.Cell(11, 4)).Style.Fill.BackgroundColor = XLColor.LightBlue;
+                    List<ReportCategoryByMonthDTO> reportList3 = new List<ReportCategoryByMonthDTO>();
+                    reportList3 = report.listreportcategoryByMonth;
+
+                    rangedetail3.Style.Border.TopBorder = XLBorderStyleValues.Thin;
+                    rangedetail3.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rangedetail3.Style.Border.LeftBorder = XLBorderStyleValues.Thin;
+                    rangedetail3.Style.Border.RightBorder = XLBorderStyleValues.Thin;
+                    rangedetail3.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+                    rangedetail3.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    worksheet.Column(9).Width = 15;
+                    for (int i = 0; i < CountRow3; i++)
+                    {
+                        worksheet.Cell(12 + i, 1).Value = reportList3[i].nameOfCategory;
+                        worksheet.Cell(12 + i, 2).Value = reportList3[i].numberOfDesiredStudents;
+                        worksheet.Cell(12 + i, 3).Value = reportList3[i].numberOfJobs;
+                        worksheet.Cell(12 + i, 4).Value = reportList3[i].numberOfStudent;
+
+                        worksheet.Cell(12 + i, 1).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                        worksheet.Cell(12 + i, 2).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                        worksheet.Cell(12 + i, 3).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                        worksheet.Cell(12 + i, 4).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                    }
+                    worksheet.Cell(11, 1).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(11, 2).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(11, 3).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    worksheet.Cell(11, 4).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
+                    worksheet.Cell(11, 1).Style.Font.Bold = true;
+                    worksheet.Cell(11, 2).Style.Font.Bold = true;
+                    worksheet.Cell(11, 3).Style.Font.Bold = true;
+                    worksheet.Cell(11, 4).Style.Font.Bold = true;
+                    //hết ngành nghề theo tháng
                     worksheet = workbook.Worksheets.Add("Report quý");
                     worksheet.Range(worksheet.Cell(1, 1), worksheet.Cell(5, 14)).Merge();
                     worksheet.Column(1).Width = 50;

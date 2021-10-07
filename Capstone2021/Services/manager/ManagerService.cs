@@ -44,6 +44,10 @@ namespace Capstone2021.Service
 
         ReportyByQuarterDTO reportByQuarter(int quarter);
 
+        List<ReportCategoryByMonthDTO> reportCategoryByMonth(int month);
+
+        List<ReportDetailByMonthDTO> reportDetailByMonth(int month);
+
         /// <summary>
         /// Tạo 1 file excel dựa trên những request nằm bên trong class RequestForReportDTO
         /// </summary>

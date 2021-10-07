@@ -305,7 +305,117 @@ namespace Capstone2021.Service
             }
             return report;
         }
-
+        //check detail month
+        public List<ReportDetailByMonthDTO> reportDetailByMonth(int month)
+        {
+            List<ReportDetailByMonthDTO> report = new List<ReportDetailByMonthDTO>();
+            using (context)
+            {
+                /*var reportRecord = (from j in context.jobs
+                                    from r in context.recruiters 
+                                    from s in context.student_apply_job
+                                    where j.recruiter_id == r.id && j.id == s.job_id &&j.create_date.Month == month && j.create_date.Year == DateTime.Now.Year
+                                    group j by new { j.name,r.last_name,j.salary_min,j.quantity,j.active_days,s.cv_id,r.phone } into g
+                                    select new ReportDetailByMonthDTO()
+                                    {
+                                        nameOfJobs = g.Key.name,
+                                        nameOfRecruiters = g.Key.last_name,
+                                        salaryMin = g.Key.salary_min,
+                                        numberOfDesiredStudents = g.Key.quantity,
+                                        phone = g.Key.phone,
+                                        activeDays = g.Key.active_days,
+                                        numberOfStudents = g.Count(),
+                                    }).ToList();
+                foreach (var row in reportRecord)
+                {
+                    var tempReport = new ReportDetailByMonthDTO
+                    {
+                        nameOfJobs = row.nameOfJobs,
+                        nameOfRecruiters = row.nameOfRecruiters,
+                        activeDays = row.activeDays,
+                        salaryMin = row.salaryMin,
+                        numberOfDesiredStudents = row.numberOfDesiredStudents,
+                        phone = row.phone,
+                        numberOfStudents = row.numberOfStudents
+                    };
+                    report.Add(tempReport);
+                }*/
+                var reportRecord = (from j in context.jobs
+                                    join r in context.recruiters on j.recruiter_id equals r.id
+                                    where j.recruiter_id == r.id && j.create_date.Month == month && j.create_date.Year == DateTime.Now.Year 
+                                     select new ReportDetailByMonthDTO()
+                                    {
+                                         idOfJob = j.id,
+                                        nameOfJobs = j.name,
+                                        nameOfRecruiters = r.last_name,
+                                        salaryMin = j.salary_min,
+                                        numberOfDesiredStudents = j.quantity,
+                                        phone = r.phone,
+                                        activeDays = j.active_days,
+                                    }).ToList();
+                 foreach (var row in reportRecord)
+                 {
+                    var tempReport = new ReportDetailByMonthDTO
+                    {
+                        nameOfJobs = row.nameOfJobs,
+                        nameOfRecruiters = row.nameOfRecruiters,
+                        activeDays = row.activeDays,
+                        salaryMin = row.salaryMin,
+                        numberOfDesiredStudents = row.numberOfDesiredStudents,
+                        phone = row.phone,
+                        numberOfStudents = context.student_apply_job.Where(c => c.job_id == row.idOfJob).Select(c => c.cv_id).Count(),
+                     };
+                     report.Add(tempReport);
+                 }
+            }
+            return report;
+        }
+        //check category month
+        public List<ReportCategoryByMonthDTO> reportCategoryByMonth(int month)
+        {
+            List<ReportCategoryByMonthDTO> report = new List<ReportCategoryByMonthDTO>();
+            List<ReportCategoryByMonthDTO> reportTemp = new List<ReportCategoryByMonthDTO>();
+            using (context)
+            {
+                var reportRecord = (from c in context.categories
+                                    from jc in context.job_has_category
+                                    from j in context.jobs
+                                    where c.id == jc.category_id && j.id == jc.job_id && j.create_date.Month == month && j.create_date.Year == DateTime.Now.Year
+                                    group j by new { c.id,c.value, jc.category_id, j.quantity } into g
+                                    select new ReportCategoryByMonthDTO
+                                    {
+                                        idOfCategory = g.Key.id,
+                                        nameOfCategory = g.Key.value,
+                                        numberOfJobs = g.Count(),
+                                        numberOfDesiredStudents = g.Sum(x => x.quantity),
+                                    }).ToList();
+                var SumReportRecord = reportRecord.GroupBy(n => n.idOfCategory).Select(g=>new ReportCategoryByMonthDTO
+                {
+                    idOfCategory = g.Key,
+                    nameOfCategory = g.Select(n => n.nameOfCategory).FirstOrDefault(),
+                    numberOfJobs = g.Sum(n => n.numberOfJobs),
+                    numberOfDesiredStudents = g.Sum(n => n.numberOfDesiredStudents),
+                }).ToList();
+                
+                foreach (var row in SumReportRecord)
+                {
+                        var tempReport = new ReportCategoryByMonthDTO
+                        {
+                            idOfCategory = row.idOfCategory,
+                            nameOfCategory = row.nameOfCategory,
+                            numberOfDesiredStudents = row.numberOfDesiredStudents,
+                            numberOfJobs = row.numberOfJobs,
+                            numberOfStudent = (from jc in context.job_has_category
+                                               from s in context.student_apply_job
+                                               from j in context.jobs
+                                               where jc.job_id == s.job_id && j.id == jc.job_id && row.idOfCategory == jc.category_id && j.create_date.Month == month && j.create_date.Year == DateTime.Now.Year
+                                               select s.cv_id).Count()
+                        };
+                        report.Add(tempReport);
+                }
+            }
+            return report;
+        }
         //check
         public ReportByYearDTO reportByYear()
         {
@@ -329,7 +439,6 @@ namespace Capstone2021.Service
             }
             return report;
         }
-
 
         public ReportyByQuarterDTO reportByQuarter(int quarter)
         {
@@ -408,6 +517,9 @@ namespace Capstone2021.Service
         {
             ReportByMonthDTO byMonth1 = new ReportByMonthDTO();
             ReportByMonthDTO byMonth2 = new ReportByMonthDTO();
+            List<ReportDetailByMonthDTO> byDetailMonth1 = new List<ReportDetailByMonthDTO>();
+            List<ReportCategoryByMonthDTO> byCategoryMonth = new List<ReportCategoryByMonthDTO>();
+            List<ReportCategoryByMonthDTO> byCategoryMonthTemp = new List<ReportCategoryByMonthDTO>();
             ReportyByQuarterDTO byQuarterThisYear = new ReportyByQuarterDTO();
             ReportyByQuarterDTO byQuarterPreviousYear = new ReportyByQuarterDTO();
             ReportByYearDTO byThisYear = new ReportByYearDTO();
@@ -624,11 +736,82 @@ namespace Capstone2021.Service
                     byMonth2.numberOfStudents = numberOfStudents;
                     byMonth2.month = (dto.month - 1).ToString();
                 }
+                //month detail
+                var reportRecord = (from j in context.jobs
+                                    join r in context.recruiters on j.recruiter_id equals r.id
+                                    where j.recruiter_id == r.id && j.create_date.Month == dto.month && j.create_date.Year == DateTime.Now.Year
+                                    select new ReportDetailByMonthDTO()
+                                    {
+                                        idOfJob = j.id,
+                                        nameOfJobs = j.name,
+                                        nameOfRecruiters = r.last_name,
+                                        salaryMin = j.salary_min,
+                                        numberOfDesiredStudents = j.quantity,
+                                        phone = r.phone,
+                                        activeDays = j.active_days,
+                                    }).ToList();
+                foreach (var row in reportRecord)
+                {
+                    var tempReport = new ReportDetailByMonthDTO
+                    {
+                        nameOfJobs = row.nameOfJobs,
+                        nameOfRecruiters = row.nameOfRecruiters,
+                        activeDays = row.activeDays,
+                        salaryMin = row.salaryMin,
+                        numberOfDesiredStudents = row.numberOfDesiredStudents,
+                        phone = row.phone,
+                        numberOfStudents = context.student_apply_job.Where(c => c.job_id == row.idOfJob).Select(c => c.cv_id).Count(),
+                    };
+                    byDetailMonth1.Add(tempReport);
+                }
+                //month category
+                var reportRecord1 = (from c in context.categories
+                                     from jc in context.job_has_category
+                                     from j in context.jobs
+                                     where c.id == jc.category_id && j.id == jc.job_id && j.create_date.Month == dto.month && j.create_date.Year == DateTime.Now.Year
+                                     group j by new { c.id, c.value, jc.category_id, j.quantity } into g
+                                     select new ReportCategoryByMonthDTO
+                                     {
+                                         idOfCategory = g.Key.id,
+                                         nameOfCategory = g.Key.value,
+                                         numberOfJobs = g.Count(),
+                                         numberOfDesiredStudents = g.Sum(x => x.quantity),
+                                     }).ToList();
+                var SumReportRecord = reportRecord1.GroupBy(n => n.idOfCategory).Select(g => new ReportCategoryByMonthDTO
+                {
+                    idOfCategory = g.Key,
+                    nameOfCategory = g.Select(n => n.nameOfCategory).FirstOrDefault(),
+                    numberOfJobs = g.Sum(n => n.numberOfJobs),
+                    numberOfDesiredStudents = g.Sum(n => n.numberOfDesiredStudents),
+                }).ToList();
+
+                foreach (var row in SumReportRecord)
+                {
+                    var tempReport = new ReportCategoryByMonthDTO
+                    {
+                        idOfCategory = row.idOfCategory,
+                        nameOfCategory = row.nameOfCategory,
+                        numberOfDesiredStudents = row.numberOfDesiredStudents,
+                        numberOfJobs = row.numberOfJobs,
+                        numberOfStudent = (from jc in context.job_has_category
+                                           from s in context.student_apply_job
+                                           from j in context.jobs
+                                           where jc.job_id == s.job_id && j.id == jc.job_id && row.idOfCategory == jc.category_id && j.create_date.Month == dto.month && j.create_date.Year == DateTime.Now.Year
+                                           select s.cv_id).Count()
+                    };
+                    byCategoryMonth.Add(tempReport);
+                }
                 //done
             }
             result.listReportByMonth = new List<ReportByMonthDTO>();
             result.listReportByMonth.Add(byMonth1);
             result.listReportByMonth.Add(byMonth2);
+
+            result.listreportdetailByMonth = new List<ReportDetailByMonthDTO>();
+            result.listreportdetailByMonth = byDetailMonth1;
+
+            result.listreportcategoryByMonth = new List<ReportCategoryByMonthDTO>();
+            result.listreportcategoryByMonth = byCategoryMonth;
 
             result.listReportByQuarter = new List<ReportyByQuarterDTO>();
             result.listReportByQuarter.Add(byQuarterThisYear);
@@ -964,5 +1147,6 @@ namespace Capstone2021.Service
             }
         }
 
+        
     }
 }

@@ -10,5 +10,10 @@ namespace Capstone2021.DTO
 
         public List<ReportByYearDTO> listreportByYear { get; set; }
 
+        public List<ReportDetailByMonthDTO> listreportdetailByMonth { get; set; }
+
+        public List<ReportCategoryByMonthDTO> listreportcategoryByMonth { get; set; }
+
+
     }
 }
